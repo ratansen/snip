@@ -12,8 +12,13 @@ A Chrome extension that removes elements from web pages by **id** or **class**, 
 Click the Snip toolbar icon and add a rule:
 
 - **URL prefix** — the rule applies to pages whose URL starts with this (prefilled with the current site; leave empty for all pages).
-- **Type** — `id` or `class`.
-- **Value** — e.g. `cookie-banner`. For class, `ad sticky` matches elements having both classes.
+- **ID** (optional) — e.g. `cookie-banner`.
+- **Class** (optional) — e.g. `ad sticky` matches elements having both classes.
+
+Fill in an ID, a class, or both; with both, an element must match both. Tick **regex** next to a field to treat it as a regular expression:
+
+- ID regex is tested against the element's id, e.g. `^promo-\d+$`.
+- Class regex matches if any single class on the element matches, e.g. `^ad-`.
 
 Rules can be toggled or deleted from the popup and are synced via `chrome.storage.sync`.
 

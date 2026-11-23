@@ -10,18 +10,19 @@
     form { display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 12px; }
     label { font-weight: 600; font-size: 12px; }
     input, select { padding: 5px 6px; font: inherit; border: 1px solid #bbb; border-radius: 4px; }
-    .row { display: flex; gap: 6px; }
-    .row select { flex: 0 0 80px; }
-    .row input { flex: 1; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row input[type="text"] { flex: 1; }
+    .row label { font-weight: normal; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
     button { padding: 6px 10px; font: inherit; cursor: pointer; border-radius: 4px; border: 1px solid #888; background: #f4f4f4; }
     button.primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
     ul { list-style: none; padding: 0; margin: 0; }
     li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid #eee; }
     li .info { flex: 1; min-width: 0; }
     li .prefix { color: #666; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    li code { background: #f1f1f1; padding: 1px 4px; border-radius: 3px; }
+    li code { background: #f1f1f1; padding: 1px 4px; border-radius: 3px; margin-right: 4px; }
     .empty { color: #888; }
     .hint { color: #777; font-size: 11px; }
+    .error { color: #c5221f; font-size: 12px; min-height: 0; }
   </style>
 </head>
 <body>
@@ -29,16 +30,26 @@
 
   <form id="form">
     <label for="prefix">URL prefix</label>
-    <input id="prefix" placeholder="https://example.com/ (empty = all pages)" />
-    <label for="value">Selector</label>
+    <input id="prefix" type="text" placeholder="https://example.com/ (empty = all pages)" />
+
+    <label for="elementId">ID</label>
     <div class="row">
-      <select id="type">
-        <option value="id">id</option>
-        <option value="class">class</option>
-      </select>
-      <input id="value" placeholder="e.g. cookie-banner" required />
+      <input id="elementId" type="text" placeholder="e.g. cookie-banner" />
+      <label><input id="elementIdRegex" type="checkbox" /> regex</label>
     </div>
-    <span class="hint">For class, multiple names (e.g. "ad sticky") match elements having all of them.</span>
+
+    <label for="className">Class</label>
+    <div class="row">
+      <input id="className" type="text" placeholder="e.g. ad sticky" />
+      <label><input id="classNameRegex" type="checkbox" /> regex</label>
+    </div>
+
+    <span class="hint">
+      Fill in ID, class, or both (both = element must match both).
+      Plain class names like "ad sticky" require all of them; a class regex
+      like <code>^ad-</code> matches if any single class matches.
+    </span>
+    <div id="error" class="error"></div>
     <button class="primary" type="submit">Add rule</button>
   </form>
 
