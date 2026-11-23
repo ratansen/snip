@@ -1,72 +1,99 @@
 // Removes elements matching stored rules whose URL prefix matches the current page.
-// Rule shape: { id, urlPrefix, elementId?, elementIdRegex, className?, classNameRegex, enabled }
-// When both elementId and className are set, an element must match both.
+// See rules.js for the rule shape. When both elementId and className are set,
+// an element must match both.
 
 (() => {
   const STYLE_ID = "__snip-style__";
+  // Cap on CSS selector combinations generated per rule for pre-hiding.
+  const MAX_SELECTORS = 16;
   let matchers = [];
   let observer = null;
 
-  // Rules saved by v1.0 had { type: "id" | "class", value }.
-  function normalize(rule) {
-    if (!rule.type) return rule;
-    const { type, value, ...rest } = rule;
-    return { ...rest, [type === "id" ? "elementId" : "className"]: value };
+  // Glob match where * matches any run of characters (including none).
+  // Greedy left-to-right scan: linear in practice, no backtracking blow-up.
+  function wildcardMatch(pattern, s) {
+    const parts = pattern.split("*");
+    if (parts.length === 1) return s === pattern;
+    const first = parts[0];
+    const last = parts[parts.length - 1];
+    if (s.length < first.length + last.length) return false;
+    if (!s.startsWith(first) || !s.endsWith(last)) return false;
+    let pos = first.length;
+    const end = s.length - last.length;
+    for (let i = 1; i < parts.length - 1; i++) {
+      const idx = s.indexOf(parts[i], pos);
+      if (idx === -1 || idx + parts[i].length > end) return false;
+      pos = idx + parts[i].length;
+    }
+    return true;
   }
 
-  // Page-controlled ids/classes longer than this are never regex-tested, so a
-  // pathological pattern can't be driven into catastrophic backtracking.
-  const MAX_REGEX_INPUT = 256;
+  const cssString = (v) => `"${v.replace(/["\\]/g, "\\$&")}"`;
 
-  function compileRegex(pattern) {
-    try {
-      const re = new RegExp(pattern);
-      return { test: (s) => s.length <= MAX_REGEX_INPUT && re.test(s) };
-    } catch {
-      return null;
-    }
+  // Classifies a pattern into a shape CSS attribute selectors can express.
+  function shape(p) {
+    if (!p.includes("*")) return { kind: "exact", text: p };
+    const parts = p.split("*");
+    if (parts.length === 2 && parts[0] && !parts[1]) return { kind: "prefix", text: parts[0] };
+    if (parts.length === 2 && !parts[0] && parts[1]) return { kind: "suffix", text: parts[1] };
+    if (parts.length === 3 && !parts[0] && parts[1] && !parts[2]) return { kind: "contains", text: parts[1] };
+    return null;
   }
 
-  // Returns { test, selector } or null. selector is a CSS selector when the
-  // rule has no regex parts, so it can be hidden before it's even parsed.
-  function compile(rule) {
-    const idValue = (rule.elementId || "").trim();
-    const classValue = (rule.className || "").trim();
-    if (!idValue && !classValue) return null;
-
-    let idTest = null, idSel = "";
-    if (idValue) {
-      if (rule.elementIdRegex) {
-        const re = compileRegex(idValue);
-        if (!re) return null;
-        idTest = (el) => re.test(el.id);
-      } else {
-        const id = idValue.replace(/^#/, "");
-        idTest = (el) => el.id === id;
-        idSel = "#" + CSS.escape(id);
-      }
-    }
-
-    let classTest = null, classSel = "";
-    if (classValue) {
-      if (rule.classNameRegex) {
-        // A regex matches if any single class name on the element matches.
-        const re = compileRegex(classValue);
-        if (!re) return null;
-        classTest = (el) => Array.from(el.classList).some((c) => re.test(c));
-      } else {
-        // "a b" or ".a.b" means an element having all those classes.
-        const names = classValue.replace(/\./g, " ").split(/\s+/).filter(Boolean);
-        classTest = (el) => names.every((n) => el.classList.contains(n));
-        classSel = names.map((n) => "." + CSS.escape(n)).join("");
-      }
-    }
-
-    const literal = (!idValue || idSel) && (!classValue || classSel);
+  // CSS alternatives matching an element whose id matches p, or null.
+  function idSelectors(p) {
+    const s = shape(p);
+    if (!s) return null;
+    const q = cssString(s.text);
     return {
-      test: (el) => (!idTest || idTest(el)) && (!classTest || classTest(el)),
-      selector: literal ? idSel + classSel : null,
-    };
+      exact: ["#" + CSS.escape(s.text)],
+      prefix: [`[id^=${q}]`],
+      suffix: [`[id$=${q}]`],
+      contains: [`[id*=${q}]`],
+    }[s.kind];
+  }
+
+  // CSS alternatives matching an element with some class matching p, or null.
+  function classSelectors(p) {
+    const s = shape(p);
+    if (!s) return null;
+    const t = s.text;
+    return {
+      exact: ["." + CSS.escape(t)],
+      prefix: [`[class^=${cssString(t)}]`, `[class*=${cssString(" " + t)}]`],
+      suffix: [`[class$=${cssString(t)}]`, `[class*=${cssString(t + " ")}]`],
+      contains: [`[class*=${cssString(t)}]`],
+    }[s.kind];
+  }
+
+  // Cartesian product of compound-selector alternatives, or "" if too many.
+  function combine(groups) {
+    let out = [""];
+    for (const alts of groups) {
+      out = out.flatMap((pre) => alts.map((a) => pre + a));
+      if (out.length > MAX_SELECTORS) return "";
+    }
+    return out.join(", ");
+  }
+
+  // Returns { test, selector } or null. selector is a CSS selector list used to
+  // hide matches before they're parsed; "" when the patterns can't be expressed.
+  function compile(rule) {
+    const idPattern = (rule.elementId || "").trim().replace(/^#/, "");
+    // "a b" or ".a.b" means an element having all those classes.
+    const classPatterns = (rule.className || "").trim().replace(/\./g, " ").split(/\s+/).filter(Boolean);
+    if (!idPattern && !classPatterns.length) return null;
+
+    const test = (el) =>
+      (!idPattern || (el.id !== "" && wildcardMatch(idPattern, el.id))) &&
+      classPatterns.every((p) => Array.from(el.classList).some((c) => wildcardMatch(p, c)));
+
+    const groups = [];
+    if (idPattern) groups.push(idSelectors(idPattern));
+    classPatterns.forEach((p) => groups.push(classSelectors(p)));
+    const selector = groups.every(Boolean) ? combine(groups) : "";
+
+    return { test, selector };
   }
 
   function matches(el) {
@@ -123,7 +150,7 @@
   function apply(rules) {
     const url = location.href;
     matchers = (rules || [])
-      .map(normalize)
+      .map(SnipRules.normalize)
       .filter((r) => r.enabled !== false && url.startsWith(r.urlPrefix || ""))
       .map(compile)
       .filter(Boolean);

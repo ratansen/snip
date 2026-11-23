@@ -1,15 +1,8 @@
 const $ = (id) => document.getElementById(id);
 
-// Rules saved by v1.0 had { type: "id" | "class", value }.
-function normalize(rule) {
-  if (!rule.type) return rule;
-  const { type, value, ...rest } = rule;
-  return { ...rest, [type === "id" ? "elementId" : "className"]: value };
-}
-
 function getRules() {
   return new Promise((resolve) =>
-    chrome.storage.sync.get({ rules: [] }, ({ rules }) => resolve(rules.map(normalize)))
+    chrome.storage.sync.get({ rules: [] }, ({ rules }) => resolve(rules.map(SnipRules.normalize)))
   );
 }
 
@@ -17,9 +10,9 @@ function saveRules(rules) {
   return new Promise((resolve) => chrome.storage.sync.set({ rules }, resolve));
 }
 
-function chip(label, value, regex) {
+function chip(label, value) {
   const code = document.createElement("code");
-  code.textContent = `${label}: ${regex ? `/${value}/` : value}`;
+  code.textContent = `${label}: ${value}`;
   return code;
 }
 
@@ -53,8 +46,8 @@ async function render() {
     const info = document.createElement("div");
     info.className = "info";
     const sel = document.createElement("div");
-    if (rule.elementId) sel.append(chip("id", rule.elementId, rule.elementIdRegex));
-    if (rule.className) sel.append(chip("class", rule.className, rule.classNameRegex));
+    if (rule.elementId) sel.append(chip("id", rule.elementId));
+    if (rule.className) sel.append(chip("class", rule.className));
     const prefix = document.createElement("div");
     prefix.className = "prefix";
     prefix.textContent = rule.urlPrefix || "(all pages)";
@@ -73,37 +66,20 @@ async function render() {
   }
 }
 
-// Returns the cleaned value, or throws with a message for the user.
-function readField(inputId, regexId, label, stripPrefix) {
-  const regex = $(regexId).checked;
-  let value = $(inputId).value.trim();
-  if (!value) return { value: "", regex };
-  if (regex) {
-    try {
-      new RegExp(value);
-    } catch (err) {
-      throw new Error(`Invalid ${label} regex: ${err.message}`);
-    }
-  } else {
-    value = value.replace(stripPrefix, "");
-  }
-  return { value, regex };
-}
+const onlyWildcards = (p) => /^\*+$/.test(p);
 
 $("form").addEventListener("submit", async (e) => {
   e.preventDefault();
   $("error").textContent = "";
 
-  let id, cls;
-  try {
-    id = readField("elementId", "elementIdRegex", "ID", /^#/);
-    cls = readField("className", "classNameRegex", "class", /^\./);
-  } catch (err) {
-    $("error").textContent = err.message;
+  const elementId = $("elementId").value.trim().replace(/^#/, "");
+  const className = $("className").value.trim().replace(/^\./, "");
+  if (!elementId && !className) {
+    $("error").textContent = "Enter an ID, a class, or both.";
     return;
   }
-  if (!id.value && !cls.value) {
-    $("error").textContent = "Enter an ID, a class, or both.";
+  if (onlyWildcards(elementId) || className.split(/[\s.]+/).some(onlyWildcards)) {
+    $("error").textContent = "A pattern of only * would match every element. Add some text around it.";
     return;
   }
 
@@ -111,10 +87,8 @@ $("form").addEventListener("submit", async (e) => {
   rules.push({
     id: crypto.randomUUID(),
     urlPrefix: $("prefix").value.trim(),
-    elementId: id.value,
-    elementIdRegex: id.regex,
-    className: cls.value,
-    classNameRegex: cls.regex,
+    elementId,
+    className,
     enabled: true,
   });
   await saveRules(rules);

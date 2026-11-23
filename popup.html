@@ -10,9 +10,6 @@
     form { display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 12px; }
     label { font-weight: 600; font-size: 12px; }
     input, select { padding: 5px 6px; font: inherit; border: 1px solid #bbb; border-radius: 4px; }
-    .row { display: flex; gap: 8px; align-items: center; }
-    .row input[type="text"] { flex: 1; }
-    .row label { font-weight: normal; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
     button { padding: 6px 10px; font: inherit; cursor: pointer; border-radius: 4px; border: 1px solid #888; background: #f4f4f4; }
     button.primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
     ul { list-style: none; padding: 0; margin: 0; }
@@ -33,21 +30,15 @@
     <input id="prefix" type="text" placeholder="https://example.com/ (empty = all pages)" />
 
     <label for="elementId">ID</label>
-    <div class="row">
-      <input id="elementId" type="text" placeholder="e.g. cookie-banner" />
-      <label><input id="elementIdRegex" type="checkbox" /> regex</label>
-    </div>
+    <input id="elementId" type="text" placeholder="e.g. cookie-banner or promo-*" />
 
     <label for="className">Class</label>
-    <div class="row">
-      <input id="className" type="text" placeholder="e.g. ad sticky" />
-      <label><input id="classNameRegex" type="checkbox" /> regex</label>
-    </div>
+    <input id="className" type="text" placeholder="e.g. ad sticky or sidebarSection*" />
 
     <span class="hint">
       Fill in ID, class, or both (both = element must match both).
-      Plain class names like "ad sticky" require all of them; a class regex
-      like <code>^ad-</code> matches if any single class matches.
+      Use <code>*</code> as a wildcard: <code>ad-*</code>, <code>*-banner</code>, <code>*promo*</code>.
+      Several class names like "ad sticky" must all be present.
     </span>
     <div id="error" class="error"></div>
     <button class="primary" type="submit">Add rule</button>
@@ -55,6 +46,7 @@
 
   <ul id="rules"></ul>
 
+  <script src="rules.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
