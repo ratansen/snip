@@ -14,9 +14,14 @@
     return { ...rest, [type === "id" ? "elementId" : "className"]: value };
   }
 
+  // Page-controlled ids/classes longer than this are never regex-tested, so a
+  // pathological pattern can't be driven into catastrophic backtracking.
+  const MAX_REGEX_INPUT = 256;
+
   function compileRegex(pattern) {
     try {
-      return new RegExp(pattern);
+      const re = new RegExp(pattern);
+      return { test: (s) => s.length <= MAX_REGEX_INPUT && re.test(s) };
     } catch {
       return null;
     }
