@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Snip</title>
+  <link rel="icon" href="icons/icon32.png" />
+  <style>
+    body { font: 13px system-ui, sans-serif; width: 420px; margin: 12px; color: #222; }
+    h1 { font-size: 15px; margin: 0 0 10px; }
+    form { display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 12px; }
+    label { font-weight: 600; font-size: 12px; }
+    input, select { padding: 5px 6px; font: inherit; border: 1px solid #bbb; border-radius: 4px; }
+    .row { display: flex; gap: 6px; }
+    .row select { flex: 0 0 80px; }
+    .row input { flex: 1; }
+    button { padding: 6px 10px; font: inherit; cursor: pointer; border-radius: 4px; border: 1px solid #888; background: #f4f4f4; }
+    button.primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid #eee; }
+    li .info { flex: 1; min-width: 0; }
+    li .prefix { color: #666; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    li code { background: #f1f1f1; padding: 1px 4px; border-radius: 3px; }
+    .empty { color: #888; }
+    .hint { color: #777; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <h1>Snip</h1>
+
+  <form id="form">
+    <label for="prefix">URL prefix</label>
+    <input id="prefix" placeholder="https://example.com/ (empty = all pages)" />
+    <label for="value">Selector</label>
+    <div class="row">
+      <select id="type">
+        <option value="id">id</option>
+        <option value="class">class</option>
+      </select>
+      <input id="value" placeholder="e.g. cookie-banner" required />
+    </div>
+    <span class="hint">For class, multiple names (e.g. "ad sticky") match elements having all of them.</span>
+    <button class="primary" type="submit">Add rule</button>
+  </form>
+
+  <ul id="rules"></ul>
+
+  <script src="popup.js"></script>
+</body>
+</html>
