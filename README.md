@@ -22,8 +22,6 @@ Use `*` as a wildcard matching any run of characters:
 - `ad-*` starts with, `*-banner` ends with, `*promo*` contains, `ad-*-top` both ends.
 - For classes, each name is matched against the element's individual classes, so `big ad-* sticky` means the element has `big`, `sticky`, and some class starting with `ad-`.
 
-Rules saved with the regex option from v1.1 are converted to wildcards automatically; ones that can't be expressed as wildcards are disabled so you can fix or delete them.
-
 Rules can be toggled or deleted from the popup and are synced via `chrome.storage.sync`.
 
 Matching elements are hidden from the start of page load, removed once present, and kept removed as the page changes (lazy-loaded content, SPA navigation).

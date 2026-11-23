@@ -1,6 +1,6 @@
 // Removes elements matching stored rules whose URL prefix matches the current page.
-// See rules.js for the rule shape. When both elementId and className are set,
-// an element must match both.
+// Rule shape: { id, urlPrefix, elementId?, className?, enabled }. elementId and
+// className may use * as a wildcard. When both are set, an element must match both.
 
 (() => {
   const STYLE_ID = "__snip-style__";
@@ -150,7 +150,6 @@
   function apply(rules) {
     const url = location.href;
     matchers = (rules || [])
-      .map(SnipRules.normalize)
       .filter((r) => r.enabled !== false && url.startsWith(r.urlPrefix || ""))
       .map(compile)
       .filter(Boolean);

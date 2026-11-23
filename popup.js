@@ -2,7 +2,7 @@ const $ = (id) => document.getElementById(id);
 
 function getRules() {
   return new Promise((resolve) =>
-    chrome.storage.sync.get({ rules: [] }, ({ rules }) => resolve(rules.map(SnipRules.normalize)))
+    chrome.storage.sync.get({ rules: [] }, ({ rules }) => resolve(rules))
   );
 }
 
